@@ -9,6 +9,10 @@ import Customers from './pages/customers/Customers';
 import Leads from './pages/leads/Leads';
 import DashboardLayout from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import Activities from './pages/activities/Activities';
+import Payments from './pages/payments/Payments';
+import Settings from './pages/settings/Settings';
+import Profile from './pages/profile/Profile';
 
 // Separate the routes component to use hooks
 const AppRoutes = () => {
@@ -27,6 +31,10 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/leads" element={<Leads />} />
+        <Route path="/activities" element={<Activities />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
