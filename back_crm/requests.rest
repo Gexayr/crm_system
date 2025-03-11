@@ -1,0 +1,259 @@
+### Auth Routes
+### Login
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}
+
+### Register
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "password": "password123"
+}
+
+### Activities Routes
+### Get All Activities
+GET http://localhost:5000/api/activities
+Authorization: Bearer your_token_here
+
+### Get Single Activity
+GET http://localhost:5000/api/activities/1
+Authorization: Bearer your_token_here
+
+### Create Activity
+POST http://localhost:5000/api/activities
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "type": "call",
+  "subject": "Follow-up Call",
+  "description": "Discuss project progress with client",
+  "status": "pending",
+  "priority": "high",
+  "dueDate": "2024-03-15",
+  "relatedTo": "Tech Corp",
+  "assignedTo": "John Doe"
+}
+
+### Update Activity
+PUT http://localhost:5000/api/activities/1
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "status": "completed",
+  "description": "Updated description for the activity"
+}
+
+### Delete Activity
+DELETE http://localhost:5000/api/activities/1
+Authorization: Bearer your_token_here
+
+### Customers Routes
+### Get All Customers
+GET http://localhost:5000/api/customers
+Authorization: Bearer your_token_here
+
+### Get Single Customer
+GET http://localhost:5000/api/customers/1
+Authorization: Bearer your_token_here
+
+### Create Customer
+POST http://localhost:5000/api/customers
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "name": "John Smith",
+  "email": "john.smith@example.com",
+  "phone": "+1234567890",
+  "address": "123 Main St, City, Country",
+  "company": "Tech Corp",
+  "status": "active"
+}
+
+### Update Customer
+PUT http://localhost:5000/api/customers/1
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "phone": "+1987654321",
+  "status": "inactive"
+}
+
+### Delete Customer
+DELETE http://localhost:5000/api/customers/1
+Authorization: Bearer your_token_here
+
+### Users Routes
+### Get Current User Profile
+GET http://localhost:5000/api/users/me
+Authorization: Bearer your_token_here
+
+### Update User Profile
+PUT http://localhost:5000/api/users/me
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "name": "Updated Name",
+  "email": "updated.email@example.com",
+  "phone": "+1234567890"
+}
+
+### Update User Avatar
+POST http://localhost:5000/api/users/me/avatar
+Content-Type: multipart/form-data
+Authorization: Bearer your_token_here
+
+// Note: For file uploads, you'll need to use a different tool like Postman
+
+### Change Password
+PUT http://localhost:5000/api/users/me/password
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newPassword123"
+}
+
+### Dashboard Routes
+### Get Dashboard Stats
+GET http://localhost:5000/api/dashboard/stats
+Authorization: Bearer your_token_here
+
+### Get Recent Activities
+GET http://localhost:5000/api/dashboard/recent-activities
+Authorization: Bearer your_token_here
+
+### Get Customer Stats
+GET http://localhost:5000/api/dashboard/customer-stats
+Authorization: Bearer your_token_here
+
+### Settings Routes
+### Get Settings
+GET http://localhost:5000/api/settings
+Authorization: Bearer your_token_here
+
+### Update Settings
+PUT http://localhost:5000/api/settings
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "companyName": "My Company",
+  "emailNotifications": true,
+  "language": "en",
+  "timezone": "UTC"
+}
+
+### Search Routes
+### Search All
+GET http://localhost:5000/api/search?q=search_term
+Authorization: Bearer your_token_here
+
+### Search Customers
+GET http://localhost:5000/api/search/customers?q=search_term
+Authorization: Bearer your_token_here
+
+### Search Activities
+GET http://localhost:5000/api/search/activities?q=search_term
+Authorization: Bearer your_token_here
+
+### Reports Routes
+### Get Activity Report
+GET http://localhost:5000/api/reports/activities?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer your_token_here
+
+### Get Customer Report
+GET http://localhost:5000/api/reports/customers?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer your_token_here
+
+### Get Performance Report
+GET http://localhost:5000/api/reports/performance?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer your_token_here
+
+### Payments Routes
+### Get All Payments
+GET http://localhost:5000/api/payments
+Authorization: Bearer your_token_here
+
+### Get Single Payment
+GET http://localhost:5000/api/payments/1
+Authorization: Bearer your_token_here
+
+### Create Payment
+POST http://localhost:5000/api/payments
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "invoiceNumber": "INV-2024-001",
+  "customer": "Tech Corp",
+  "amount": 5000,
+  "status": "pending",
+  "paymentMethod": "credit_card",
+  "date": "2024-03-15",
+  "dueDate": "2024-04-15"
+}
+
+### Update Payment
+PUT http://localhost:5000/api/payments/1
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "status": "completed",
+  "amount": 6000
+}
+
+### Delete Payment
+DELETE http://localhost:5000/api/payments/1
+Authorization: Bearer your_token_here
+
+### Profile Routes
+### Get Profile
+GET http://localhost:5000/api/profile
+Authorization: Bearer your_token_here
+
+### Update Profile
+PUT http://localhost:5000/api/profile
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "phone": "+1234567890",
+  "position": "Sales Manager",
+  "department": "Sales",
+  "location": "New York"
+}
+
+### Update Profile Avatar
+POST http://localhost:5000/api/profile/avatar
+Content-Type: multipart/form-data
+Authorization: Bearer your_token_here
+
+// Note: For file uploads, use Postman or similar tool
+
+### Change Password
+PUT http://localhost:5000/api/profile/password
+Content-Type: application/json
+Authorization: Bearer your_token_here
+
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newPassword123"
+}
