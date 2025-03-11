@@ -1,4 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { RootState } from '../../store';
+import {
+  fetchCustomers,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+} from '../../store/slices/customersSlice';
+import { 
+  Customer, 
+  CreateCustomerRequest, 
+  UpdateCustomerRequest 
+} from '../../services/customerService';
 import {
   Box,
   Paper,
@@ -13,170 +26,103 @@ import {
   Typography,
   IconButton,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  status: 'active' | 'inactive' | 'pending';
-  totalRevenue: number;
-}
-
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1234567890',
-    company: 'Tech Corp',
-    status: 'active',
-    totalRevenue: 50000,
-  },
-  // Add more mock data as needed
-];
-
-const CustomerDialog: React.FC<{
-  open: boolean;
-  onClose: () => void;
-  customer?: Customer;
-}> = ({ open, onClose, customer }) => {
-  const [formData, setFormData] = useState<Partial<Customer>>(
-    customer || {
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      status: 'pending',
-    }
-  );
-
-  const handleSubmit = () => {
-    // Handle form submission
-    console.log('Form submitted:', formData);
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {customer ? 'Edit Customer' : 'Add New Customer'}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField
-            label="Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Phone"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Company"
-            value={formData.company}
-            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            select
-            label="Status"
-            value={formData.status}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                status: e.target.value as Customer['status'],
-              })
-            }
-            fullWidth
-          >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-          </TextField>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained">
-          Save
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+import CustomerDialog from './CustomerDialog';
 
 const Customers: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { customers, loading, error } = useAppSelector(
+    (state: RootState) => state.customers
+  );
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>();
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
+  const [newCustomer, setNewCustomer] = useState<CreateCustomerRequest>({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    company: '',
+    status: 'active'
+  });
+
+  useEffect(() => {
+    dispatch(fetchCustomers());
+  }, [dispatch]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
-  const handleEdit = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setDialogOpen(true);
+  const handleAdd = async (data: CreateCustomerRequest) => {
+    try {
+      await dispatch(createCustomer(data)).unwrap();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to create customer:', error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    // Handle delete
-    console.log('Delete customer:', id);
+  const handleEdit = async (data: UpdateCustomerRequest) => {
+    if (selectedCustomer) {
+      try {
+        await dispatch(updateCustomer({ id: selectedCustomer.id, data })).unwrap();
+        setDialogOpen(false);
+        setSelectedCustomer(undefined);
+      } catch (error) {
+        console.error('Failed to update customer:', error);
+      }
+    }
   };
 
-  const handleAddNew = () => {
-    setSelectedCustomer(undefined);
-    setDialogOpen(true);
+  const handleDelete = async (id: string) => {
+    try {
+      await dispatch(deleteCustomer(id)).unwrap();
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
+
+  const displayedCustomers = Array.isArray(customers) 
+    ? customers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+    : [];
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5">Customers</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleAddNew}
+          onClick={() => {
+            setSelectedCustomer(undefined);
+            setDialogOpen(true);
+          }}
         >
           Add Customer
         </Button>
@@ -191,55 +137,54 @@ const Customers: React.FC = () => {
               <TableCell>Phone</TableCell>
               <TableCell>Company</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Revenue</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockCustomers
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>{customer.name}</TableCell>
-                  <TableCell>{customer.email}</TableCell>
-                  <TableCell>{customer.phone}</TableCell>
-                  <TableCell>{customer.company}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={customer.status}
-                      color={
-                        customer.status === 'active'
-                          ? 'success'
-                          : customer.status === 'inactive'
-                          ? 'error'
-                          : 'warning'
-                      }
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>${customer.totalRevenue.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(customer)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(customer.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+            {displayedCustomers.map((customer) => (
+              <TableRow key={customer.id}>
+                <TableCell>{customer.name}</TableCell>
+                <TableCell>{customer.email}</TableCell>
+                <TableCell>{customer.phone}</TableCell>
+                <TableCell>{customer.company}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={customer.status}
+                    color={
+                      customer.status === 'active'
+                        ? 'success'
+                        : customer.status === 'inactive'
+                        ? 'error'
+                        : 'warning'
+                    }
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setSelectedCustomer(customer);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDelete(customer.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={mockCustomers.length}
+          count={Array.isArray(customers) ? customers.length : 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -249,8 +194,12 @@ const Customers: React.FC = () => {
 
       <CustomerDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          setDialogOpen(false);
+          setSelectedCustomer(undefined);
+        }}
         customer={selectedCustomer}
+        onSubmit={selectedCustomer ? handleEdit : handleAdd}
       />
     </Box>
   );

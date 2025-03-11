@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { RootState } from '../../store';
+import {
+  fetchPayments,
+  createPayment,
+  updatePayment,
+  deletePayment,
+} from '../../store/slices/paymentsSlice';
+import { Payment, CreatePaymentRequest, UpdatePaymentRequest } from '../../services/paymentService';
 import {
   Box,
   Paper,
@@ -13,154 +22,29 @@ import {
   Typography,
   IconButton,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-
-interface Payment {
-  id: string;
-  invoiceNumber: string;
-  customer: string;
-  amount: number;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  paymentMethod: 'credit_card' | 'bank_transfer' | 'cash' | 'other';
-  date: string;
-  dueDate: string;
-}
-
-const mockPayments: Payment[] = [
-  {
-    id: '1',
-    invoiceNumber: 'INV-2024-001',
-    customer: 'Tech Corp',
-    amount: 5000,
-    status: 'completed',
-    paymentMethod: 'credit_card',
-    date: '2024-03-07',
-    dueDate: '2024-04-07',
-  },
-  // Add more mock data
-];
-
-const PaymentDialog: React.FC<{
-  open: boolean;
-  onClose: () => void;
-  payment?: Payment;
-}> = ({ open, onClose, payment }) => {
-  const [formData, setFormData] = useState<Partial<Payment>>(
-    payment || {
-      invoiceNumber: '',
-      customer: '',
-      amount: 0,
-      status: 'pending',
-      paymentMethod: 'credit_card',
-      date: '',
-      dueDate: '',
-    }
-  );
-
-  const handleSubmit = () => {
-    console.log('Form submitted:', formData);
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {payment ? 'Edit Payment' : 'Add New Payment'}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField
-            label="Invoice Number"
-            value={formData.invoiceNumber}
-            onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Customer"
-            value={formData.customer}
-            onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Amount"
-            type="number"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-            fullWidth
-          />
-          <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={formData.status}
-              label="Status"
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as Payment['status'] })}
-            >
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-              <MenuItem value="failed">Failed</MenuItem>
-              <MenuItem value="refunded">Refunded</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel>Payment Method</InputLabel>
-            <Select
-              value={formData.paymentMethod}
-              label="Payment Method"
-              onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as Payment['paymentMethod'] })}
-            >
-              <MenuItem value="credit_card">Credit Card</MenuItem>
-              <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
-              <MenuItem value="cash">Cash</MenuItem>
-              <MenuItem value="other">Other</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            label="Payment Date"
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-            fullWidth
-          />
-          <TextField
-            label="Due Date"
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-            fullWidth
-          />
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained">
-          Save
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+import PaymentDialog from './PaymentDialog';
 
 const Payments: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { payments, loading, error } = useAppSelector(
+    (state: RootState) => state.payments
+  );
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | undefined>();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | undefined>(undefined);
+
+  useEffect(() => {
+    dispatch(fetchPayments());
+  }, [dispatch]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -171,19 +55,56 @@ const Payments: React.FC = () => {
     setPage(0);
   };
 
-  const handleEdit = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setDialogOpen(true);
+  const handleAddPayment = async (data: CreatePaymentRequest) => {
+    try {
+      await dispatch(createPayment(data)).unwrap();
+      setOpenDialog(false);
+    } catch (error) {
+      console.error('Failed to create payment:', error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    console.log('Delete payment:', id);
+  const handleEditPayment = async (data: CreatePaymentRequest) => {
+    if (selectedPayment) {
+      try {
+        await dispatch(updatePayment({ 
+          id: selectedPayment.id, 
+          data: data 
+        })).unwrap();
+        setOpenDialog(false);
+        setSelectedPayment(undefined);
+      } catch (error) {
+        console.error('Failed to update payment:', error);
+      }
+    }
   };
 
-  const handleAddNew = () => {
-    setSelectedPayment(undefined);
-    setDialogOpen(true);
+  const handleDeletePayment = async (id: string) => {
+    try {
+      await dispatch(deletePayment(id)).unwrap();
+    } catch (error) {
+      console.error('Failed to delete payment:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  // Ensure payments is an array
+  const paymentsList = Array.isArray(payments) ? payments : [];
 
   return (
     <Box sx={{ p: 3 }}>
@@ -192,7 +113,10 @@ const Payments: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleAddNew}
+          onClick={() => {
+            setSelectedPayment(undefined);
+            setOpenDialog(true);
+          }}
         >
           Add Payment
         </Button>
@@ -213,7 +137,7 @@ const Payments: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockPayments
+            {paymentsList
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((payment) => (
                 <TableRow key={payment.id}>
@@ -239,10 +163,19 @@ const Payments: React.FC = () => {
                   <TableCell>{payment.date}</TableCell>
                   <TableCell>{payment.dueDate}</TableCell>
                   <TableCell>
-                    <IconButton size="small" onClick={() => handleEdit(payment)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setOpenDialog(true);
+                      }}
+                    >
                       <EditIcon />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(payment.id)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeletePayment(payment.id)}
+                    >
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -253,7 +186,7 @@ const Payments: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={mockPayments.length}
+          count={paymentsList.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -262,9 +195,13 @@ const Payments: React.FC = () => {
       </TableContainer>
 
       <PaymentDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        open={openDialog}
+        onClose={() => {
+          setOpenDialog(false);
+          setSelectedPayment(undefined);
+        }}
         payment={selectedPayment}
+        onSubmit={selectedPayment ? handleEditPayment : handleAddPayment}
       />
     </Box>
   );

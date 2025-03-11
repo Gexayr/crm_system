@@ -28,7 +28,7 @@ import {
   Settings as SettingsIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '../../hooks/redux';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
 
 const drawerWidth = 240;
@@ -52,8 +52,8 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
   }),
 }));
 
-const DashboardLayout = () => {
-  const [open, setOpen] = useState(true);
+export const DashboardLayout: React.FC = () => {
+  const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();

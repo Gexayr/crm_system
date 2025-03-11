@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { RootState } from '../../store';
 import {
   Box,
   Paper,
@@ -22,159 +24,57 @@ import {
   FormControl,
   InputLabel,
   Select,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import {
+  fetchActivities,
+  createActivity,
+  updateActivity,
+  deleteActivity,
+} from '../../store/slices/activitiesSlice';
+import { Activity, CreateActivityRequest, UpdateActivityRequest } from '../../services/activityService';
 
-interface Activity {
-  id: string;
-  type: 'call' | 'meeting' | 'email' | 'task' | 'note';
-  subject: string;
-  description: string;
-  status: 'pending' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high';
-  dueDate: string;
-  relatedTo: string;
-  assignedTo: string;
-}
-
-const mockActivities: Activity[] = [
-  {
-    id: '1',
-    type: 'call',
-    subject: 'Follow-up Call',
-    description: 'Discuss project progress',
-    status: 'pending',
-    priority: 'high',
-    dueDate: '2024-03-10',
-    relatedTo: 'Tech Corp',
-    assignedTo: 'John Doe',
-  },
-  // Add more mock data
-];
-
-const ActivityDialog: React.FC<{
-  open: boolean;
-  onClose: () => void;
-  activity?: Activity;
-}> = ({ open, onClose, activity }) => {
-  const [formData, setFormData] = useState<Partial<Activity>>(
-    activity || {
-      type: 'call',
-      subject: '',
-      description: '',
-      status: 'pending',
-      priority: 'medium',
-      dueDate: '',
-      relatedTo: '',
-      assignedTo: '',
-    }
-  );
-
-  const handleSubmit = () => {
-    console.log('Form submitted:', formData);
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {activity ? 'Edit Activity' : 'Add New Activity'}
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Type</InputLabel>
-            <Select
-              value={formData.type}
-              label="Type"
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as Activity['type'] })}
-            >
-              <MenuItem value="call">Call</MenuItem>
-              <MenuItem value="meeting">Meeting</MenuItem>
-              <MenuItem value="email">Email</MenuItem>
-              <MenuItem value="task">Task</MenuItem>
-              <MenuItem value="note">Note</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            label="Subject"
-            value={formData.subject}
-            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            multiline
-            rows={3}
-            fullWidth
-          />
-          <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={formData.status}
-              label="Status"
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as Activity['status'] })}
-            >
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-              <MenuItem value="cancelled">Cancelled</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={formData.priority}
-              label="Priority"
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value as Activity['priority'] })}
-            >
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            label="Due Date"
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-            fullWidth
-          />
-          <TextField
-            label="Related To"
-            value={formData.relatedTo}
-            onChange={(e) => setFormData({ ...formData, relatedTo: e.target.value })}
-            fullWidth
-          />
-          <TextField
-            label="Assigned To"
-            value={formData.assignedTo}
-            onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-            fullWidth
-          />
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained">
-          Save
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+import ActivityDialog from './ActivityDialog';
 
 const Activities: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const { activities, loading, error } = useAppSelector(
+    (state: RootState) => state.activities
+  );
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
+  const [newActivity, setNewActivity] = useState<CreateActivityRequest>({
+    type: 'task',
+    subject: '',
+    description: '',
+    status: 'pending',
+    priority: 'medium',
+    dueDate: new Date().toISOString(),
+    relatedTo: '',
+    assignedTo: ''
+  });
+
+  useEffect(() => {
+    const loadActivities = async () => {
+      try {
+        await dispatch(fetchActivities()).unwrap();
+      } catch (error) {
+        console.error('Failed to fetch activities:', error);
+      }
+    };
+    loadActivities();
+  }, [dispatch]);
+
+  // Add this console log to see what's in the state
+  console.log('Current activities state:', activities);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -185,19 +85,56 @@ const Activities: React.FC = () => {
     setPage(0);
   };
 
-  const handleEdit = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setDialogOpen(true);
+  const handleAddActivity = async (data: CreateActivityRequest) => {
+    try {
+      await dispatch(createActivity(data)).unwrap();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to create activity:', error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    console.log('Delete activity:', id);
+  const handleEditActivity = async (data: UpdateActivityRequest) => {
+    try {
+      if (selectedActivity) {
+        await dispatch(updateActivity({ 
+          id: selectedActivity.id,
+          data 
+        })).unwrap();
+        setDialogOpen(false);
+        setSelectedActivity(undefined);
+      }
+    } catch (error) {
+      console.error('Failed to update activity:', error);
+    }
   };
 
-  const handleAddNew = () => {
-    setSelectedActivity(undefined);
-    setDialogOpen(true);
+  const handleDeleteActivity = async (id: string) => {
+    try {
+      await dispatch(deleteActivity(id)).unwrap();
+    } catch (error) {
+      console.error('Failed to delete activity:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  // Ensure activities is an array
+  const activitiesList = Array.isArray(activities) ? activities : [];
 
   return (
     <Box sx={{ p: 3 }}>
@@ -206,7 +143,10 @@ const Activities: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleAddNew}
+          onClick={() => {
+            setSelectedActivity(undefined);
+            setDialogOpen(true);
+          }}
         >
           Add Activity
         </Button>
@@ -227,7 +167,7 @@ const Activities: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {mockActivities
+            {activitiesList
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((activity) => (
                 <TableRow key={activity.id}>
@@ -265,10 +205,19 @@ const Activities: React.FC = () => {
                   <TableCell>{activity.relatedTo}</TableCell>
                   <TableCell>{activity.assignedTo}</TableCell>
                   <TableCell>
-                    <IconButton size="small" onClick={() => handleEdit(activity)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSelectedActivity(activity);
+                        setDialogOpen(true);
+                      }}
+                    >
                       <EditIcon />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(activity.id)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteActivity(activity.id)}
+                    >
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -279,7 +228,7 @@ const Activities: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={mockActivities.length}
+          count={activitiesList.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -289,8 +238,12 @@ const Activities: React.FC = () => {
 
       <ActivityDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          setDialogOpen(false);
+          setSelectedActivity(undefined);
+        }}
         activity={selectedActivity}
+        onSubmit={selectedActivity ? handleEditActivity : handleAddActivity}
       />
     </Box>
   );
